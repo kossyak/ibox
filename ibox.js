@@ -1,7 +1,3 @@
-/**
- * ibox - Безопасная обертка над MessageChannel для связи Host <-> Iframe
- * Поддерживает: Promise (call/response), Events (emit/on), Timeouts, Security Origin
- */
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) { define([], factory); }
     else if (typeof module === 'object' && module.exports) { module.exports = factory(); }
@@ -31,7 +27,6 @@
             if (isDestroyed || !e.data) return;
             const { event, data, _ibox_id, _ibox_res_id, _ibox_error } = e.data;
 
-            // 1. Обработка ответа на наш вызов (call)
             if (_ibox_res_id && pendingCalls.has(_ibox_res_id)) {
                 const { resolve, reject } = pendingCalls.get(_ibox_res_id);
                 pendingCalls.delete(_ibox_res_id);
@@ -39,13 +34,10 @@
                 else resolve(data);
                 return;
             }
-
-            // 2. Обработка входящего события
             if (event && handlers.has(event)) {
                 const callbacks = handlers.get(event);
 
                 if (_ibox_id) {
-                    // Режим CALL: берем первый обработчик и отправляем ответ
                     const [firstHandler] = callbacks;
                     if (!firstHandler) return;
                     try {
@@ -55,7 +47,6 @@
                         port.postMessage({ _ibox_res_id: _ibox_id, _ibox_error: err.message });
                     }
                 } else {
-                    // Режим EMIT: уведомляем всех подписчиков
                     for (const cb of callbacks) {
                         try { cb(data); } catch (err) { console.error(`ibox: Handler error [${event}]:`, err); }
                     }
@@ -105,7 +96,6 @@
                 if (!handlers.has(event)) handlers.set(event, new Set());
                 handlers.get(event).add(cb);
 
-                // Возвращаем функцию отписки (unsub)
                 return () => api.off(event, cb);
             },
 
